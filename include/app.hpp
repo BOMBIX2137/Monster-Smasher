@@ -1,5 +1,5 @@
 #pragma once
-#include"device.hpp"
+#include"swapChain.hpp"
 
 class App {
 public:
@@ -15,5 +15,6 @@ public:
 
 private:
 	Window window{ WIDTH, HEIGHT, "MONSTER SMASHER" };
-	Device device{};
+	Device device{window};
+	SwapChain swapChain{ device, window };
 };

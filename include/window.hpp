@@ -13,11 +13,13 @@ public:
 	
 	bool windowShouldClose() const { return glfwWindowShouldClose(window); }
 	GLFWwindow* getWindow() const { return window; }
+	void createSurface(VkInstance instance, VkSurfaceKHR *surface);
 
 private:
 	void initWindow();
 
 	int width, height;
 	std::string windowName;
-	GLFWwindow* window{};
+
+	GLFWwindow* window = nullptr;
 };
