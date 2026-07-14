@@ -31,18 +31,23 @@ public:
 	VkSurfaceKHR getSurface() const { return surface; }
 	QueueFamilyIndices findPhysicalQueueFamilies() const { return findQueueFamilies(physicalDevice); }
 	VkDevice device() const { return m_device; }
+	VkCommandPool getCommandPool() const { return commandPool; }
+	VkQueue getGraphicsQueue() const { return graphicsQueue; }
+	VkQueue getPresentQueue() const { return presentQueue; }
 
 private:
 	void createInstance();
+	void setupDebugMessenger();
+	void createSurface();
+	void pickPhysicalDevice();
+	void createLogicalDevice();
+	void createCommandPool();
+
 	bool checkValidationLayerSupport();
 	std::vector<const char*> getRequiredExtensions();
-	void setupDebugMessenger();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-	void pickPhysicalDevice();
 	bool isDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
-	void createLogicalDevice();
-	void createSurface();
 	bool checkDeviceExtensionsSupported(VkPhysicalDevice device);
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const;
 
@@ -55,4 +60,6 @@ private:
 	VkQueue graphicsQueue = VK_NULL_HANDLE;
 	VkQueue presentQueue = VK_NULL_HANDLE;
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+	VkCommandPool commandPool;
 };

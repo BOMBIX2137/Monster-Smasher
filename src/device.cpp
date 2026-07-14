@@ -62,10 +62,13 @@ Device::Device(Window &window) : window{window}
 	createSurface();
 	pickPhysicalDevice();
 	createLogicalDevice();
+	createCommandPool();
 }
 
 Device::~Device()
 {
+	std::cout << "device destructor" << std::endl;
+	vkDestroyCommandPool(m_device, commandPool, nullptr);
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	if (enableValidationLayers) {
@@ -280,6 +283,20 @@ void Device::createLogicalDevice()
 
 	vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 	vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &presentQueue);
+}
+
+void Device::createCommandPool()
+{
+	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+	if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create command pool!");
+	}
 }
 
 void Device::createSurface()

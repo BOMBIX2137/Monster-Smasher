@@ -13,9 +13,18 @@ public:
 	SwapChain(const SwapChain&) = delete;
 	SwapChain& operator = (const SwapChain&) = delete;
 
+	VkRenderPass getRenderPass() const { return renderPass; }
+	VkFramebuffer getFramebuffer(uint32_t index) const { return swapChainFramebuffers[index]; }
+	VkExtent2D getExtent() const { return swapChainExtent; }
+	VkFormat getImageFormat() const { return swapChainImageFormat; }
+	VkSwapchainKHR getSwapChain() const { return m_swapChain; }
+
 private:
 	void createSwapChain();
 	void createImageViews();
+	void createRenderPass();
+	void createFrameBuffers();
+
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
@@ -32,4 +41,7 @@ private:
 	VkExtent2D swapChainExtent{};
 
 	std::vector<VkImageView> swapChainImageViews;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
+
+	VkRenderPass renderPass;
 };

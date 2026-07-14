@@ -1,5 +1,5 @@
 #pragma once
-#include"swapChain.hpp"
+#include"renderer.hpp"
 
 class App {
 public:
@@ -17,4 +17,6 @@ private:
 	Window window{ WIDTH, HEIGHT, "MONSTER SMASHER" };
 	Device device{window};
 	SwapChain swapChain{ device, window };
+	GraphicsPipeline pipeline{ device, swapChain };
+	Renderer renderer{ window, device, swapChain, pipeline };
 };

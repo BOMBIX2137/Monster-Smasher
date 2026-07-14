@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include<stdexcept>
+#include<iostream>
 
 Window::Window(int w, int h, const std::string& name) : width{w}, height{h}, windowName{name}
 {
@@ -8,6 +9,7 @@ Window::Window(int w, int h, const std::string& name) : width{w}, height{h}, win
 
 Window::~Window()
 {
+	std::cout << "window destructor" << std::endl;
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
