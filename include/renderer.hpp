@@ -3,6 +3,8 @@
 #include"swapChain.hpp"
 #include"graphicsPipeline.hpp"
 
+constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
 class Renderer {
 public:
 	Renderer(Window& window,
@@ -13,9 +15,8 @@ public:
 
 	void drawFrame();
 
-
 private:
-	void createCommandBuffer();
+	void createCommandBuffers();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void createSyncObjects();
 
@@ -26,9 +27,11 @@ private:
 	SwapChain& swapChain;
 	GraphicsPipeline& graphicsPipeline;
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
-	VkFence inFlightFence;
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> inFlightFences;
 
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffers;
+	uint32_t currentFrame = 0;
+
 };

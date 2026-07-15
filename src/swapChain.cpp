@@ -13,15 +13,7 @@ SwapChain::SwapChain(Device& device, Window& window) : device{device}, window{wi
 
 SwapChain::~SwapChain()
 {
-	for (auto framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
-	}
-	std::cout << "Swap chain destructor!" << std::endl;
-	for (auto imageView : swapChainImageViews) {
-		vkDestroyImageView(device.device(), imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(device.device(), m_swapChain, nullptr);
+	cleanupSwapChain();
 	vkDestroyRenderPass(device.device(), renderPass, nullptr);
 }
 
@@ -174,6 +166,35 @@ void SwapChain::createFrameBuffers()
 			throw std::runtime_error("failed to create framebuffer!");
 		}
 	}
+}
+
+void SwapChain::recreateSwapChain()
+{
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(window.getWindow(), &width, &height);
+	while (width == 0 || height == 0) {
+		glfwGetFramebufferSize(window.getWindow(), &width, &height);
+		glfwWaitEvents();
+	}
+
+	vkDeviceWaitIdle(device.device());
+
+	cleanupSwapChain();
+
+	createSwapChain();
+	createImageViews();
+	createFrameBuffers();
+}
+
+void SwapChain::cleanupSwapChain()
+{
+	for (auto& framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+	}
+	for (auto& imageView : swapChainImageViews) {
+		vkDestroyImageView(device.device(), imageView, nullptr);
+	}
+	vkDestroySwapchainKHR(device.device(), m_swapChain, nullptr);
 }
 
 
