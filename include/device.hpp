@@ -34,6 +34,13 @@ public:
 	VkCommandPool getCommandPool() const { return commandPool; }
 	VkQueue getGraphicsQueue() const { return graphicsQueue; }
 	VkQueue getPresentQueue() const { return presentQueue; }
+	VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
+
+	void createBuffer(VkDeviceSize size,
+		VkBufferUsageFlags usage,
+		VkMemoryPropertyFlags properties,
+		VkBuffer& buffer,
+		VkDeviceMemory& bufferMemory);
 
 private:
 	void createInstance();
@@ -50,6 +57,7 @@ private:
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
 	bool checkDeviceExtensionsSupported(VkPhysicalDevice device);
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const;
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 	Window& window;
 
