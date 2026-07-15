@@ -2,8 +2,17 @@
 #include"device.hpp"
 #include"swapChain.hpp"
 #include"graphicsPipeline.hpp"
+#include"buffer.hpp"
+
+#include<memory>
 
 constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
+const std::vector<Vertex> vertices = {
+	{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 
 class Renderer {
 public:
@@ -19,6 +28,7 @@ private:
 	void createCommandBuffers();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void createSyncObjects();
+	void createVertexBuffer();
 
 
 
@@ -34,4 +44,5 @@ private:
 	std::vector<VkCommandBuffer> commandBuffers;
 	uint32_t currentFrame = 0;
 
+	std::unique_ptr<Buffer> vertexBuffer;
 };

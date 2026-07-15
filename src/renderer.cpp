@@ -2,8 +2,24 @@
 
 #include"stdexcept"
 #include<iostream>
-Renderer::Renderer(Window& window, Device& device, SwapChain& swapChain, GraphicsPipeline& graphicsPipeline) : window{ window }, device{ device }, swapChain{ swapChain }, graphicsPipeline { graphicsPipeline }
+Renderer::Renderer(Window& window,
+	Device& device,
+	SwapChain& swapChain,
+	GraphicsPipeline& graphicsPipeline
+) 
+	: window{ window },
+	device{ device },
+	swapChain{ swapChain },
+	graphicsPipeline { graphicsPipeline }
 {
+	vertexBuffer = std::make_unique<Buffer>(
+		device,
+		vertices.size() * sizeof(Vertex),
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	);
+	createVertexBuffer();
 	createCommandBuffers();
 	createSyncObjects();
 }
@@ -133,8 +149,13 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	scissor.extent = swapChain.getExtent();
 	scissor.offset = { 0,0 };
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+	
 
-	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+	VkBuffer vertexBuffers[] = { vertexBuffer->getBuffer()};
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+	vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffer);
 
@@ -168,4 +189,9 @@ void Renderer::createSyncObjects()
 			throw std::runtime_error("failed to create synchronization objects for a frame!");
 		}
 	}
+}
+
+void Renderer::createVertexBuffer()
+{
+	vertexBuffer->writeToBuffer(vertices.data(), vertices.size() * sizeof(Vertex));
 }
