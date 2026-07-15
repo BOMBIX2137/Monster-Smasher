@@ -12,13 +12,7 @@ Renderer::Renderer(Window& window,
 	swapChain{ swapChain },
 	graphicsPipeline { graphicsPipeline }
 {
-	vertexBuffer = std::make_unique<Buffer>(
-		device,
-		vertices.size() * sizeof(Vertex),
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-	);
+	createVertexBuffer();
 	createVertexBuffer();
 	createCommandBuffers();
 	createSyncObjects();
@@ -193,5 +187,24 @@ void Renderer::createSyncObjects()
 
 void Renderer::createVertexBuffer()
 {
-	vertexBuffer->writeToBuffer(vertices.data(), vertices.size() * sizeof(Vertex));
+	VkDeviceSize bufferSize = sizeof(Vertex) * vertices.size();
+
+	Buffer stagingBuffer(device,
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	);
+
+	stagingBuffer.writeToBuffer(vertices.data(), bufferSize);
+
+	vertexBuffer = std::make_unique<Buffer>(
+		device,
+		bufferSize,
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	);
+
+	device.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }

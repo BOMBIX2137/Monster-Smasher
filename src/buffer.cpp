@@ -27,7 +27,7 @@ void Buffer::unmap()
 
 void Buffer::writeToBuffer(const void* data, VkDeviceSize size)
 {
-    map();
+    map(size);
     memcpy(mapped, data, size);
     unmap();
 }
