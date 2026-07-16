@@ -1,5 +1,6 @@
 #pragma once
 #include"window.hpp"
+#include"vk_mem_alloc.h"
 
 #include<vector>
 #include<optional>
@@ -35,12 +36,13 @@ public:
 	VkQueue getGraphicsQueue() const { return graphicsQueue; }
 	VkQueue getPresentQueue() const { return presentQueue; }
 	VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
+	VmaAllocator getAllocator() const { return allocator; }
 
-	void createBuffer(VkDeviceSize size,
-		VkBufferUsageFlags usage,
-		VkMemoryPropertyFlags properties,
-		VkBuffer& buffer,
-		VkDeviceMemory& bufferMemory);
+	//void createBuffer(VkDeviceSize size,
+	//	VkBufferUsageFlags usage,
+	//	VkMemoryPropertyFlags properties,
+	//	VkBuffer& buffer,
+	//	VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
 private:
@@ -50,6 +52,7 @@ private:
 	void pickPhysicalDevice();
 	void createLogicalDevice();
 	void createCommandPool();
+	void createAllocator();
 
 	bool checkValidationLayerSupport();
 	std::vector<const char*> getRequiredExtensions();
@@ -72,5 +75,6 @@ private:
 	VkQueue presentQueue = VK_NULL_HANDLE;
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-	VkCommandPool commandPool;
+	VkCommandPool commandPool = VK_NULL_HANDLE;
+	VmaAllocator allocator = VK_NULL_HANDLE;
 };

@@ -195,8 +195,7 @@ void Renderer::createVertexBuffer()
 	Buffer stagingBuffer(device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		VMA_MEMORY_USAGE_CPU_ONLY
 	);
 
 	stagingBuffer.writeToBuffer(vertices.data(), bufferSize);
@@ -206,7 +205,7 @@ void Renderer::createVertexBuffer()
 		bufferSize,
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		VMA_MEMORY_USAGE_GPU_ONLY
 	);
 
 	device.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
@@ -219,8 +218,7 @@ void Renderer::createIndexBuffer()
 	Buffer stagingBuffer(device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		VMA_MEMORY_USAGE_CPU_ONLY
 	);
 
 	stagingBuffer.writeToBuffer(indices.data(), bufferSize);
@@ -230,7 +228,7 @@ void Renderer::createIndexBuffer()
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
 		VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		VMA_MEMORY_USAGE_GPU_ONLY
 	);
 	device.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 }
