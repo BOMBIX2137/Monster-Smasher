@@ -1,26 +1,37 @@
 #include "buffer.hpp"
 #include<stdexcept>
 
-Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) : device{ device }
+Buffer::Buffer(Device& device, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) : device{ device }
 {
-    device.createBuffer(size, usage, properties, buffer, memory);
+    VkBufferCreateInfo bufferInfo{};
+
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = memoryUsage;
+
+    if (vmaCreateBuffer(device.getAllocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create buffer!");
+    }
 }
 
 Buffer::~Buffer()
 {
-    vkDestroyBuffer(device.device(), buffer, nullptr);
-    vkFreeMemory(device.device(), memory, nullptr);
+    vmaDestroyBuffer(device.getAllocator(), buffer, allocation);
 }
 
 void Buffer::map(VkDeviceSize size, VkDeviceSize offset)
 {
-    vkMapMemory(device.device(), memory, offset, size, 0, &mapped);
+    vmaMapMemory(device.getAllocator(), allocation, &mapped);
 }
 
 void Buffer::unmap()
 {
     if (mapped) {
-        vkUnmapMemory(device.device(), memory);
+        vmaUnmapMemory(device.getAllocator(), allocation);
         mapped = nullptr;
     }
 }
@@ -30,10 +41,5 @@ void Buffer::writeToBuffer(const void* data, VkDeviceSize size)
     map(size);
     memcpy(mapped, data, size);
     unmap();
-}
-
-void Buffer::bind()
-{
-    vkBindBufferMemory(device.device(), buffer, memory, 0);
 }
 

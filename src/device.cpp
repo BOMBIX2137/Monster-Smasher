@@ -62,6 +62,7 @@ Device::Device(Window &window) : window{window}
 	createSurface();
 	pickPhysicalDevice();
 	createLogicalDevice();
+	createAllocator();
 	createCommandPool();
 }
 
@@ -69,6 +70,7 @@ Device::~Device()
 {
 	std::cout << "device destructor" << std::endl;
 	vkDestroyCommandPool(m_device, commandPool, nullptr);
+	vmaDestroyAllocator(allocator);
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	if (enableValidationLayers) {
@@ -77,32 +79,32 @@ Device::~Device()
 	vkDestroyInstance(instance, nullptr);
 }
 
-void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
-{
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = usage;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create vertex buffer!");
-	}
-
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-	if (vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate vertex buffer memory!");
-	}
-
-	vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
-}
+//void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+//{
+//	VkBufferCreateInfo bufferInfo{};
+//	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+//	bufferInfo.size = size;
+//	bufferInfo.usage = usage;
+//	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+//
+//	if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+//		throw std::runtime_error("failed to create vertex buffer!");
+//	}
+//
+//	VkMemoryRequirements memRequirements;
+//	vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
+//
+//	VkMemoryAllocateInfo allocInfo{};
+//	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+//	allocInfo.allocationSize = memRequirements.size;
+//	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+//
+//	if (vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+//		throw std::runtime_error("failed to allocate vertex buffer memory!");
+//	}
+//
+//	vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
+//}
 
 void Device::createInstance()
 {
@@ -326,6 +328,23 @@ void Device::createCommandPool()
 	}
 }
 
+void Device::createAllocator()
+{
+	VmaAllocatorCreateInfo allocatorInfo{};
+
+	allocatorInfo.physicalDevice = physicalDevice;
+	allocatorInfo.device = m_device;
+	allocatorInfo.instance = instance;
+
+	if (vmaCreateAllocator(
+		&allocatorInfo,
+		&allocator
+	) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create allocator!");
+	}
+}
+
 void Device::createSurface()
 {
 	window.createSurface(instance, &surface);
@@ -369,17 +388,17 @@ SwapChainSupportDetails Device::querySwapChainSupport(VkPhysicalDevice device) c
 	return details;
 }
 
-uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
-{
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-		if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-			return i;
-		}
-	}
-	throw std::runtime_error("failed to find suitable memory type!");
-}
+//uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+//{
+//	VkPhysicalDeviceMemoryProperties memProperties;
+//	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+//	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+//		if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+//			return i;
+//		}
+//	}
+//	throw std::runtime_error("failed to find suitable memory type!");
+//}
 
 void Device::copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
 {

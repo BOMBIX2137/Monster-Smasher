@@ -13,7 +13,7 @@ Renderer::Renderer(Window& window,
 	graphicsPipeline { graphicsPipeline }
 {
 	createVertexBuffer();
-	createVertexBuffer();
+	createIndexBuffer();
 	createCommandBuffers();
 	createSyncObjects();
 }
@@ -68,28 +68,28 @@ void Renderer::drawFrame()
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
-VkPresentInfoKHR presentInfo{};
-presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-presentInfo.waitSemaphoreCount = 1;
-presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
 
-VkSwapchainKHR swapChains[] = { swapChain.getSwapChain() };
-presentInfo.swapchainCount = 1;
-presentInfo.pSwapchains = swapChains;
-presentInfo.pImageIndices = &imageIndex;
-presentInfo.pResults = nullptr;
+	VkSwapchainKHR swapChains[] = { swapChain.getSwapChain() };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr;
 
-result = vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
-if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.wasWindowResized()) {
-	window.resetWindowResizedFlag();
-	swapChain.recreate();
-}
-else if (result != VK_SUCCESS) {
-	throw std::runtime_error("failed to present swap chain image!");
-}
+	result = vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.wasWindowResized()) {
+		window.resetWindowResizedFlag();
+		swapChain.recreate();
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
 
-currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 void Renderer::createCommandBuffers()
 {
@@ -149,7 +149,10 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-	vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+	vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT16);
+
+	//vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffer);
 
@@ -192,8 +195,7 @@ void Renderer::createVertexBuffer()
 	Buffer stagingBuffer(device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		VMA_MEMORY_USAGE_CPU_ONLY
 	);
 
 	stagingBuffer.writeToBuffer(vertices.data(), bufferSize);
@@ -203,8 +205,30 @@ void Renderer::createVertexBuffer()
 		bufferSize,
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		VMA_MEMORY_USAGE_GPU_ONLY
 	);
 
 	device.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
+}
+
+void Renderer::createIndexBuffer()
+{
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+	Buffer stagingBuffer(device,
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VMA_MEMORY_USAGE_CPU_ONLY
+	);
+
+	stagingBuffer.writeToBuffer(indices.data(), bufferSize);
+
+	indexBuffer = std::make_unique<Buffer>(
+		device,
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VMA_MEMORY_USAGE_GPU_ONLY
+	);
+	device.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 }

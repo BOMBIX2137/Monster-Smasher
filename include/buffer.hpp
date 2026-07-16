@@ -9,7 +9,7 @@ public:
 	Buffer(Device& device,
 		VkDeviceSize size,
 		VkBufferUsageFlags usage,
-		VkMemoryPropertyFlags properties
+		VmaMemoryUsage memoryUsage
 	);
 
 	~Buffer();
@@ -22,13 +22,12 @@ public:
 	void map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
 	void unmap();
 	void writeToBuffer(const void* data, VkDeviceSize size);
-	void bind();
 
 private:
 
 	Device& device;
 
 	VkBuffer buffer{};
-	VkDeviceMemory memory = VK_NULL_HANDLE;
+	VmaAllocation allocation = VK_NULL_HANDLE;
 	void* mapped = nullptr;
 };
