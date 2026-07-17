@@ -2,19 +2,40 @@
 
 #include"stdexcept"
 #include<iostream>
-Renderer::Renderer(Window& window,
+Renderer::Renderer(
+	Window& window,
 	Device& device,
 	SwapChain& swapChain,
-	GraphicsPipeline& graphicsPipeline
-) 
-	: window{ window },
+	GraphicsPipeline& graphicsPipeline,
+	Descriptor& descriptor
+)
+	:
+	window{ window },
 	device{ device },
 	swapChain{ swapChain },
-	graphicsPipeline { graphicsPipeline }
+	graphicsPipeline{ graphicsPipeline },
+	descriptor{ descriptor }
 {
+
 	createVertexBuffer();
+
 	createIndexBuffer();
+
+
+	uniformBuffer =
+		std::make_unique<Buffer>(
+			device,
+			sizeof(UniformBufferObject),
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VMA_MEMORY_USAGE_CPU_TO_GPU
+		);
+
+
+	descriptor.createSet(*uniformBuffer);
+
+
 	createCommandBuffers();
+
 	createSyncObjects();
 }
 Renderer::~Renderer()
@@ -31,6 +52,7 @@ Renderer::~Renderer()
 }
 void Renderer::drawFrame()
 {
+	updateUniformBuffer();
 	vkWaitForFences(device.device(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 	vkResetFences(device.device(), 1, &inFlightFences[currentFrame]);
 
@@ -144,6 +166,16 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	scissor.offset = { 0,0 };
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	
+	vkCmdBindDescriptorSets(
+		commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		graphicsPipeline.getPipelineLayout(),
+		0,
+		1,
+		&descriptor.getSet(),
+		0,
+		nullptr
+	);
 
 	VkBuffer vertexBuffers[] = { vertexBuffer->getBuffer()};
 	VkDeviceSize offsets[] = { 0 };
@@ -231,4 +263,42 @@ void Renderer::createIndexBuffer()
 		VMA_MEMORY_USAGE_GPU_ONLY
 	);
 	device.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
+}
+
+void Renderer::updateUniformBuffer()
+{
+	UniformBufferObject ubo{};
+
+	float time = glfwGetTime();
+
+	ubo.model =
+		glm::rotate(
+			glm::mat4(1.0f),
+			time,
+			glm::vec3(0, 1, 0)
+		);
+
+	ubo.view =
+		glm::lookAt(
+			glm::vec3(2, 2, 3),
+			glm::vec3(0, 0, 0),
+			glm::vec3(0, 1, 0)
+		);
+
+	ubo.proj =
+		glm::perspective(
+			glm::radians(45.0f),
+			swapChain.getExtent().width /
+			(float)swapChain.getExtent().height,
+			0.1f,
+			10.0f
+		);
+
+
+	ubo.proj[1][1] *= -1;
+
+	uniformBuffer->writeToBuffer(
+		&ubo,
+		sizeof(ubo)
+	);
 }

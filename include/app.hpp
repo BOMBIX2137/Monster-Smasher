@@ -17,6 +17,7 @@ private:
 	Window window{ WIDTH, HEIGHT, "MONSTER SMASHER" };
 	Device device{window};
 	SwapChain swapChain{ device, window };
-	GraphicsPipeline pipeline{ device, swapChain };
-	Renderer renderer{ window, device, swapChain, pipeline };
+	Descriptor descriptor{ device };
+	GraphicsPipeline pipeline{ device, swapChain,descriptor };
+	Renderer renderer{ window, device, swapChain, pipeline, descriptor };
 };
