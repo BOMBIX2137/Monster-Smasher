@@ -22,20 +22,17 @@ Renderer::Renderer(
 	createIndexBuffer();
 
 
-	uniformBuffer =
-		std::make_unique<Buffer>(
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		uniformBuffers[i] = std::make_unique<Buffer>(
 			device,
 			sizeof(UniformBufferObject),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VMA_MEMORY_USAGE_CPU_TO_GPU
 		);
-
-
-	descriptor.createSet(*uniformBuffer);
-
+		descriptor.createSet(*uniformBuffers[i]);
+	}
 
 	createCommandBuffers();
-
 	createSyncObjects();
 }
 Renderer::~Renderer()
@@ -138,7 +135,7 @@ void Renderer::handleInput(GLFWwindow* window, float dt)
 	spaceWasPressed = spacePressed;
 
 	double xpos, ypos;
-	glfwGetCursorPos(window, & xpos, &ypos);
+	glfwGetCursorPos(window, &xpos, &ypos);
 
 	if (firstMouse) {
 		lastX = xpos; lastY = ypos;
@@ -208,7 +205,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 		graphicsPipeline.getPipelineLayout(),
 		0,
 		1,
-		&descriptor.getSet(),
+		&descriptor.getSet(currentFrame),
 		0,
 		nullptr
 	);
@@ -337,7 +334,7 @@ void Renderer::updateUniformBuffer()
 		ubo.proj[1][1] *= -1;
 	}
 
-	uniformBuffer->writeToBuffer(
+	uniformBuffers[currentFrame]->writeToBuffer(
 		&ubo,
 		sizeof(ubo)
 	);

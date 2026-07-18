@@ -4,6 +4,7 @@
 #include "buffer.hpp"
 
 #include <glm/glm.hpp>
+#include<array>
 
 
 struct UniformBufferObject
@@ -13,41 +14,33 @@ struct UniformBufferObject
     glm::mat4 proj;
 };
 
-
-
 class Descriptor
 {
 
 public:
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
     Descriptor(Device& device);
 
     ~Descriptor();
 
-
-
     void createLayout();
 
     void createPool();
 
-    void createSet(
+    VkDescriptorSet createSet(
         Buffer& uniformBuffer
     );
-
-
 
     VkDescriptorSetLayout* getLayout()
     {
         return &descriptorSetLayout;
     }
 
-
-    const VkDescriptorSet& getSet() const
+    const VkDescriptorSet& getSet(size_t frameIndex) const
     {
-        return descriptorSet;
+        return descriptorSets[frameIndex];
     }
-
-
 
 private:
 
@@ -62,7 +55,6 @@ private:
         VK_NULL_HANDLE;
 
 
-    VkDescriptorSet descriptorSet =
-        VK_NULL_HANDLE;
-
+    std::array<VkDescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets = {};
+    size_t createdSets = 0;
 };

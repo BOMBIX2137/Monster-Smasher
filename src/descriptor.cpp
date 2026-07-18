@@ -37,11 +37,11 @@ void Descriptor::createPool()
 {
 	VkDescriptorPoolSize poolSize{};
 	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSize.descriptorCount = 1;
+	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.maxSets = 1;
+	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	poolInfo.poolSizeCount = 1;
 	poolInfo.pPoolSizes = &poolSize;
 
@@ -50,15 +50,19 @@ void Descriptor::createPool()
 	}
 }
 
-void Descriptor::createSet(Buffer& uniformBuffer)
+VkDescriptorSet Descriptor::createSet(Buffer& uniformBuffer)
 {
+	if (createdSets >= MAX_FRAMES_IN_FLIGHT) {
+		throw std::runtime_error("too many descriptor sets created!");
+	}
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = &descriptorSetLayout;
 
-	if (vkAllocateDescriptorSets(device.device(), &allocInfo, &descriptorSet) != VK_SUCCESS) {
+	VkDescriptorSet set;
+	if (vkAllocateDescriptorSets(device.device(), &allocInfo, &set) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
 
@@ -69,7 +73,7 @@ void Descriptor::createSet(Buffer& uniformBuffer)
 
 	VkWriteDescriptorSet descriptorWrite{};
 	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstSet = set;
 	descriptorWrite.dstBinding = 0;
 	descriptorWrite.dstArrayElement = 0;
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -77,4 +81,8 @@ void Descriptor::createSet(Buffer& uniformBuffer)
 	descriptorWrite.pBufferInfo = &bufferInfo;
 
 	vkUpdateDescriptorSets(device.device(), 1, &descriptorWrite, 0, nullptr);
+
+	descriptorSets[createdSets] = set;
+	createdSets++;
+	return set;
 }

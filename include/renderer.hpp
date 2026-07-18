@@ -127,6 +127,6 @@ private:
     std::unique_ptr<Buffer> indexBuffer;
 
 
-    std::unique_ptr<Buffer> uniformBuffer;
+    std::array<std::unique_ptr<Buffer>, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
 
 };
