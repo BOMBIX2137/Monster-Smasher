@@ -5,6 +5,7 @@
 #include "graphicsPipeline.hpp"
 #include "buffer.hpp"
 #include "descriptor.hpp"
+#include"camera.hpp"
 
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
@@ -50,8 +51,6 @@ const std::vector<uint16_t> indices = {
     1,0,4
 };
 
-
-
 class Renderer {
 
 public:
@@ -64,13 +63,12 @@ public:
         Descriptor& descriptor
     );
 
-
     ~Renderer();
-
 
     void drawFrame();
 
-
+    void setCamera(Camera* cam) { camera = cam; }
+    void handleInput(GLFWwindow* window, float dt);
 
 private:
 
@@ -93,6 +91,10 @@ private:
 
 
 private:
+
+    Camera* camera = VK_NULL_HANDLE;
+    float lastX = 0, lastY = 0;
+    bool firstMouse = true;
 
     Window& window;
 
