@@ -20,4 +20,7 @@ private:
 	Descriptor descriptor{ device };
 	GraphicsPipeline pipeline{ device, swapChain,descriptor };
 	Renderer renderer{ window, device, swapChain, pipeline, descriptor };
+	Camera camera{};
+
+	float lastTime = 0.0f;
 };

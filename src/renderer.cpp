@@ -22,20 +22,17 @@ Renderer::Renderer(
 	createIndexBuffer();
 
 
-	uniformBuffer =
-		std::make_unique<Buffer>(
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		uniformBuffers[i] = std::make_unique<Buffer>(
 			device,
 			sizeof(UniformBufferObject),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VMA_MEMORY_USAGE_CPU_TO_GPU
 		);
-
-
-	descriptor.createSet(*uniformBuffer);
-
+		descriptor.createSet(*uniformBuffers[i]);
+	}
 
 	createCommandBuffers();
-
 	createSyncObjects();
 }
 Renderer::~Renderer()
@@ -113,6 +110,42 @@ void Renderer::drawFrame()
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
+void Renderer::handleInput(GLFWwindow* window, float dt)
+{
+	if (!camera) return;
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		camera->move(MovementDir::FORWARD, dt);
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+		camera->move(MovementDir::BACKWARD, dt);
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		camera->move(MovementDir::LEFT, dt);
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+		camera->move(MovementDir::RIGHT, dt);
+	}
+	
+	static bool spaceWasPressed = false;
+	bool spacePressed = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+	if (spacePressed && !spaceWasPressed) {
+		camera->jump();
+	}
+	spaceWasPressed = spacePressed;
+
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+
+	if (firstMouse) {
+		lastX = xpos; lastY = ypos;
+		firstMouse = false;
+	}
+	float dx = xpos - lastX;
+	float dy = lastY - ypos;
+	lastX = xpos; lastY = ypos;
+	camera->rotate(dx, dy);
+}
 void Renderer::createCommandBuffers()
 {
 	commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -172,7 +205,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 		graphicsPipeline.getPipelineLayout(),
 		0,
 		1,
-		&descriptor.getSet(),
+		&descriptor.getSet(currentFrame),
 		0,
 		nullptr
 	);
@@ -277,27 +310,31 @@ void Renderer::updateUniformBuffer()
 			time,
 			glm::vec3(0, 1, 0)
 		);
+	if (camera) {
+		float aspect = swapChain.getExtent().width / (float)swapChain.getExtent().height;
+		ubo.view = camera->getView();
+		ubo.proj = camera->getProj(aspect);
+	}
+	else {
+		ubo.view =
+			glm::lookAt(
+				glm::vec3(2, 2, 3),
+				glm::vec3(0, 0, 0),
+				glm::vec3(0, 1, 0)
+			);
 
-	ubo.view =
-		glm::lookAt(
-			glm::vec3(2, 2, 3),
-			glm::vec3(0, 0, 0),
-			glm::vec3(0, 1, 0)
-		);
+		ubo.proj =
+			glm::perspective(
+				glm::radians(45.0f),
+				swapChain.getExtent().width /
+				(float)swapChain.getExtent().height,
+				0.1f,
+				10.0f
+			);
+		ubo.proj[1][1] *= -1;
+	}
 
-	ubo.proj =
-		glm::perspective(
-			glm::radians(45.0f),
-			swapChain.getExtent().width /
-			(float)swapChain.getExtent().height,
-			0.1f,
-			10.0f
-		);
-
-
-	ubo.proj[1][1] *= -1;
-
-	uniformBuffer->writeToBuffer(
+	uniformBuffers[currentFrame]->writeToBuffer(
 		&ubo,
 		sizeof(ubo)
 	);
