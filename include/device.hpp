@@ -44,6 +44,8 @@ public:
 	//	VkBuffer& buffer,
 	//	VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 private:
 	void createInstance();
@@ -62,8 +64,6 @@ private:
 	bool checkDeviceExtensionsSupported(VkPhysicalDevice device);
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const;
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	Window& window;
 

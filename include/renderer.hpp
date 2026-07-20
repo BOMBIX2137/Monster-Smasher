@@ -6,6 +6,9 @@
 #include "buffer.hpp"
 #include "descriptor.hpp"
 #include"camera.hpp"
+#include"texture.hpp"
+#include"modelPipeline.hpp"
+#include"model.hpp"
 
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
@@ -65,6 +68,9 @@ public:
 
     ~Renderer();
 
+    Renderer(const Renderer&) = delete;
+    Renderer& operator=(const Renderer&) = delete;
+
     void drawFrame();
 
     void setCamera(Camera* cam) { camera = cam; }
@@ -88,6 +94,8 @@ private:
 
     void updateUniformBuffer();
 
+    void createWeaponDescriptorSet();
+
 
 
 private:
@@ -109,24 +117,23 @@ private:
 
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
-
     std::vector<VkSemaphore> renderFinishedSemaphores;
-
     std::vector<VkFence> inFlightFences;
-
-
     std::vector<VkCommandBuffer> commandBuffers;
-
-
     uint32_t currentFrame = 0;
 
 
-
+    //cube
     std::unique_ptr<Buffer> vertexBuffer;
-
     std::unique_ptr<Buffer> indexBuffer;
+    std::unique_ptr<Texture> texture;
+    std::unique_ptr<Buffer> uniformBuffers[MAX_FRAMES_IN_FLIGHT];
 
-
-    std::array<std::unique_ptr<Buffer>, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
-
+    //weapon
+    std::unique_ptr<ModelPipeline> weaponPipeline;
+    std::unique_ptr<Model> weapon;
+    std::unique_ptr<Texture> weaponTexture;
+    VkDescriptorSet weaponDescriptorSet = VK_NULL_HANDLE;
+    VkDescriptorSetLayout weaponSamplerLayout = VK_NULL_HANDLE;
+    VkDescriptorPool weaponDescriptorPool = VK_NULL_HANDLE;
 };

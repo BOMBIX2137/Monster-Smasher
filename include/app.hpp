@@ -1,5 +1,6 @@
 #pragma once
 #include"renderer.hpp"
+#include"texture.hpp"
 
 class App {
 public:
@@ -21,6 +22,8 @@ private:
 	GraphicsPipeline pipeline{ device, swapChain,descriptor };
 	Renderer renderer{ window, device, swapChain, pipeline, descriptor };
 	Camera camera{};
+
+	Texture tex{ device, "assets/textures/texture.png" };
 
 	float lastTime = 0.0f;
 };
