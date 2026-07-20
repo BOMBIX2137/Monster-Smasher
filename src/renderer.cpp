@@ -9,19 +9,19 @@ Renderer::Renderer(
 	GraphicsPipeline& graphicsPipeline,
 	Descriptor& descriptor
 )
-	:
-	window{ window },
+	: window{ window },
 	device{ device },
 	swapChain{ swapChain },
 	graphicsPipeline{ graphicsPipeline },
 	descriptor{ descriptor }
 {
-
 	createVertexBuffer();
-
 	createIndexBuffer();
 
+	// NAJPIERW tekstury
+	texture = std::make_unique<Texture>(device, "assets/textures/pop_cat.png");
 
+	// POTEM deskryptory kostki
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		uniformBuffers[i] = std::make_unique<Buffer>(
 			device,
@@ -29,8 +29,18 @@ Renderer::Renderer(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VMA_MEMORY_USAGE_CPU_TO_GPU
 		);
-		descriptor.createSet(*uniformBuffers[i]);
+		descriptor.createSet(*uniformBuffers[i], *texture);
 	}
+
+	// Broń
+	weaponPipeline = std::make_unique<ModelPipeline>(device, swapChain);
+	weapon = std::make_unique<Model>(device, "assets/models/SCAR.obj");
+
+	std::cout << "Creating weapon texture..." << std::endl;
+	weaponTexture = std::make_unique<Texture>(device, "assets/textures/texture.png");
+	std::cout << "Weapon texture created: " << weaponTexture.get() << std::endl;
+
+	createWeaponDescriptorSet();
 
 	createCommandBuffers();
 	createSyncObjects();
@@ -46,6 +56,13 @@ Renderer::~Renderer()
 		vkDestroySemaphore(device.device(), renderFinishedSemaphores[i], nullptr);
 	}
 	vkFreeCommandBuffers(device.device(), device.getCommandPool(), commandBuffers.size(), commandBuffers.data());
+
+	if (weaponDescriptorPool != VK_NULL_HANDLE) {
+		vkDestroyDescriptorPool(device.device(), weaponDescriptorPool, nullptr);
+	}
+	if (weaponSamplerLayout != VK_NULL_HANDLE) {
+		vkDestroyDescriptorSetLayout(device.device(), weaponSamplerLayout, nullptr);
+	}
 }
 void Renderer::drawFrame()
 {
@@ -160,14 +177,11 @@ void Renderer::createCommandBuffers()
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
 }
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
-{
+void Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex) {
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0;
-	beginInfo.pInheritanceInfo = nullptr;
 
-	if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+	if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) {
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
 
@@ -175,15 +189,16 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = swapChain.getRenderPass();
 	renderPassInfo.framebuffer = swapChain.getFramebuffer(imageIndex);
-	renderPassInfo.renderArea.offset = { 0,0 };
+	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapChain.getExtent();
-	VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
-	renderPassInfo.clearValueCount = 1;
-	renderPassInfo.pClearValues = &clearColor;
 
-	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	std::array<VkClearValue, 2> clearValues{};
+	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
 
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.getPipeline());
+	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	VkViewport viewport{};
 	viewport.x = 0.0f;
@@ -192,36 +207,82 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	viewport.height = static_cast<float>(swapChain.getExtent().height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
-	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 	VkRect2D scissor{};
 	scissor.extent = swapChain.getExtent();
-	scissor.offset = { 0,0 };
-	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-	
+	scissor.offset = { 0, 0 };
+
+	// --- CUBE ---
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.getPipeline());
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
 	vkCmdBindDescriptorSets(
-		commandBuffer,
+		cmd,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		graphicsPipeline.getPipelineLayout(),
-		0,
-		1,
+		0, 1,
 		&descriptor.getSet(currentFrame),
-		0,
-		nullptr
+		0, nullptr
 	);
 
-	VkBuffer vertexBuffers[] = { vertexBuffer->getBuffer()};
+	VkBuffer vertexBuffers[] = { vertexBuffer->getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(cmd, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT16);
+	vkCmdDrawIndexed(cmd, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-	vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT16);
+	// --- WEAPON ---
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, weaponPipeline->getPipeline());
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-	//vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+	vkCmdBindDescriptorSets(
+		cmd,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		weaponPipeline->getLayout(),
+		0, 1,
+		&weaponDescriptorSet,
+		0, nullptr
+	);
 
-	vkCmdEndRenderPass(commandBuffer);
+	struct {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	} pc;
 
-	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+	pc.model = glm::mat4(1.0f);
+	pc.model = glm::translate(pc.model, glm::vec3(0.3f, -0.2f, -0.4f));
+
+	// Obrót o 180° — broń skierowana do przodu (w stronę kamery)
+	pc.model = glm::rotate(pc.model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	// Ewentualnie dodatkowy obrót jeśli trzeba wyregulować
+	pc.model = glm::rotate(pc.model, glm::radians(-15.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	pc.model = glm::scale(pc.model, glm::vec3(0.2f));
+
+	float aspect = swapChain.getExtent().width / (float)swapChain.getExtent().height;
+	pc.view = glm::mat4(1.0f);
+	pc.proj = camera->getProj(aspect);
+
+	vkCmdPushConstants(
+		cmd,
+		weaponPipeline->getLayout(),
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0,
+		sizeof(pc),
+		&pc
+	);
+
+	weapon->bind(cmd);
+	weapon->draw(cmd);
+
+
+	vkCmdEndRenderPass(cmd);
+
+	if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
 }
@@ -338,4 +399,61 @@ void Renderer::updateUniformBuffer()
 		&ubo,
 		sizeof(ubo)
 	);
+}
+
+void Renderer::createWeaponDescriptorSet() {
+	if (!weaponTexture) {
+		throw std::runtime_error("weaponTexture is null!");
+	}
+	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+	samplerLayoutBinding.binding = 0;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &samplerLayoutBinding;
+
+	if (vkCreateDescriptorSetLayout(device.device(), &layoutInfo, nullptr, &weaponSamplerLayout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create weapon sampler layout!");
+	}
+
+	VkDescriptorPoolSize poolSize{};
+	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSize.descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.maxSets = 1;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+
+	if (vkCreateDescriptorPool(device.device(), &poolInfo, nullptr, &weaponDescriptorPool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create weapon descriptor pool!");
+	}
+
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = weaponDescriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &weaponSamplerLayout;
+
+	if (vkAllocateDescriptorSets(device.device(), &allocInfo, &weaponDescriptorSet) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate weapon descriptor set!");
+	}
+
+	VkDescriptorImageInfo imageInfo = weaponTexture->descriptorInfo();
+
+	VkWriteDescriptorSet descriptorWrite{};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = weaponDescriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.pImageInfo = &imageInfo;
+
+	vkUpdateDescriptorSets(device.device(), 1, &descriptorWrite, 0, nullptr);
 }

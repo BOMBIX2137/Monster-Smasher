@@ -2,6 +2,7 @@
 
 #include "device.hpp"
 #include "buffer.hpp"
+#include"texture.hpp"
 
 #include <glm/glm.hpp>
 #include<array>
@@ -29,7 +30,8 @@ public:
     void createPool();
 
     VkDescriptorSet createSet(
-        Buffer& uniformBuffer
+        Buffer& uniformBuffer,
+        Texture& texture
     );
 
     VkDescriptorSetLayout* getLayout()
